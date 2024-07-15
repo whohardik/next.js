@@ -22,7 +22,7 @@ email:{
     unique:true,
     trim:true
 },
-isVerfied:{
+isVerified:{
     type:Boolean,
     default:false 
 }
