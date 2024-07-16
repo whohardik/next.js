@@ -2,12 +2,26 @@ import { connect } from "@/dbConfig/dbCongig"
 import User from "@/models/userModel"
 import { NextRequest, NextResponse } from "next/server"
 import { sendEmail } from "@/helpers/mailer"
+import { createUserSchema } from "@/servervaildation/signup"
 import bcrypt from "bcryptjs"
+import { z } from "zod"
 connect()
 export async function POST(request: NextRequest) {
     try {
         const reqBody = await request.json();
-        const { username, email, password } = reqBody;
+        const validatedData: any = createUserSchema.parse(reqBody);
+
+        if (!validatedData) {
+            // Handle validation errors here
+            const errors = validatedData.error.flatten().fieldErrors;
+            const errorMessage = errors.map((err: { path: any[]; message: any }) => ({
+                field: err.path.join('.'),
+                message: err.message,
+            }));
+            return NextResponse.json({ error: errorMessage }, { status: 400 });
+        }
+
+        const { username, email, password } = validatedData;
 
         // Check if user exists
         const user = await User.findOne({ email });
@@ -30,15 +44,26 @@ export async function POST(request: NextRequest) {
         const savedUser = await newUser.save();
         // send email for verfication 
         const send_mail = await sendEmail({ userId: savedUser._id, email, emailType: "VERIFY" });
-        console.log("🚀 ~ POST ~ send_mail:", send_mail)
+
         return NextResponse.json({
             message: "User created",
             success: true,
             savedUser
         });
-    } catch (error) {
-        return NextResponse.json({ error: error }, { status: 500 });
+    } catch (error: any) {
+        // Handle Zod validation errors
+        if (error instanceof z.ZodError) {
+            const errorMessage = error.errors.map(err => ({
+                field: err.path.join('.'),
+                message: err.message,
+            }));
+            return NextResponse.json({ error: errorMessage }, { status: 400 });
+        }
+
+        // Handle other errors
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
 
 

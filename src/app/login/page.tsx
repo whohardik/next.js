@@ -4,7 +4,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import toast from "react-hot-toast";
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function LoginPage() {
     const router = useRouter()
@@ -40,8 +40,9 @@ export default function LoginPage() {
     }, [user])
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen py-2">
 
+        <div className="flex flex-col items-center justify-center min-h-screen py-2">
+            <div><Toaster /></div>
             <hr />
 
             <label htmlFor="email">Email</label>

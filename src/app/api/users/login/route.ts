@@ -3,12 +3,25 @@ import User from "@/models/userModel"
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+import { z } from "zod"
+import { loginUserSchema } from "@/servervaildation/signup"
 connect()
 
 export async function POST(request: NextRequest) {
     try {
         const reqBody = await request.json();
-        const { email, password } = reqBody;
+        const validatedData: any = loginUserSchema.parse(reqBody);
+
+        if (!validatedData) {
+            // Handle validation errors here
+            const errors = validatedData.error.flatten().fieldErrors;
+            const errorMessage = errors.map((err: { path: any[]; message: any }) => ({
+                field: err.path.join('.'),
+                message: err.message,
+            }));
+            return NextResponse.json({ error: errorMessage }, { status: 400 });
+        }
+        const { email, password } = validatedData;
 
         // check is user exist
         const user = await User.findOne({ email })
@@ -34,8 +47,19 @@ export async function POST(request: NextRequest) {
             httpOnly: true
         })
         return response
-    } catch (error) {
-        return NextResponse.json({ error: error }, { status: 500 });
+    } catch (error: any) {
+        // Handle Zod validation errors
+        if (error instanceof z.ZodError) {
+            const errorMessage = error.errors.map(err => ({
+                field: err.path.join('.'),
+                message: err.message,
+            }));
+            return NextResponse.json({ error: errorMessage }, { status: 400 });
+        }
+
+        // Handle other errors
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
 

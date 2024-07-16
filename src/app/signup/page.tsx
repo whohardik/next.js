@@ -4,8 +4,8 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import toast from "react-hot-toast";
-
+import toast, { Toaster } from 'react-hot-toast';
+import { signupSchema } from "@/app/clinetvaildations/signup"
 export default function SignupPage() {
     const router = useRouter();
 
@@ -20,14 +20,40 @@ export default function SignupPage() {
     const onSignUp = async () => {
         try {
             setLoading(true);
+            // Validate user input
+            const result = signupSchema.safeParse(user);
+
+            if (!result.success) {
+                const formattedErrors: any = result.error.format();
+
+                const errorMessage = Object.keys(formattedErrors)
+                    .map((key) => {
+                        const error = formattedErrors[key];
+                        if (error._errors && Array.isArray(error._errors)) {
+                            return error._errors.join(", ");
+                        } else {
+                            return "Unknown error";
+                        }
+                    })
+                    .join("\n");
+
+                toast.error(errorMessage);
+                return;
+            }
             const response = await axios.post("/api/users/signup", user)
-            console.log("signup sucess", response.data);
+            if (response.data.success) {
 
-            router.push("/login")
+
+
+                router.push("/login");
+            } else {
+                // Handle unexpected success response
+                toast.error("Signup succeeded but an unexpected response was received.");
+            }
+
         } catch (error: any) {
-            console.log("signup faild", error.message);
 
-            toast.error(error.message)
+            toast.error(error.response.data.error)
         } finally {
             setLoading(false)
         }
@@ -40,8 +66,13 @@ export default function SignupPage() {
         }
 
     }, [user])
+
+    console.log(toast);
+
     return (
+
         <div className="flex flex-col items-center justify-center min-h-screen py-2">
+            <div><Toaster /></div>
             <h1>{loading ? "processing" : "signup"}</h1>
             <hr />
             <label htmlFor="username">Username</label>
